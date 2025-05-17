@@ -4,6 +4,7 @@ import com.rentgame.model.User;
 import com.rentgame.repository.UserRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,4 +43,26 @@ public class UserController {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return ResponseEntity.ok(userRepository.save(user));
     }
+
+    @PutMapping("/{id}/reset-password")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> resetPassword(@PathVariable Long id) {
+        User user = userRepository.findById(id).orElse(null);
+        if (user == null) return ResponseEntity.notFound().build();
+
+        user.setPassword(passwordEncoder.encode("default123"));
+        userRepository.save(user);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        if (!userRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        userRepository.deleteById(id);
+        return ResponseEntity.ok().body("Użytkownik usunięty");
+    }
+
 }

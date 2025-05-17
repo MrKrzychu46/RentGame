@@ -8,6 +8,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -49,6 +50,16 @@ public class ReservationController {
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<?> createReservation(@Valid @RequestBody ReservationRequest request) {
         User user = userRepository.findById(request.getUserId()).orElseThrow();
+
+        // ✅ Warunek: wymagane gameId lub equipmentId
+        if (request.getGameId() == null && request.getEquipmentId() == null) {
+            return ResponseEntity.badRequest().body("Musisz wybrać grę lub sprzęt do rezerwacji.");
+        }
+
+        // ✅ Warunek: startDate nie może być w przeszłości
+        if (request.getStartDate().isBefore(LocalDate.now())) {
+            return ResponseEntity.badRequest().body("Nie można rezerwować na termin w przeszłości.");
+        }
 
         // Gra
         Game game = null;
@@ -93,6 +104,7 @@ public class ReservationController {
         Reservation reservation = new Reservation(user, game, equipment, request.getStartDate(), request.getEndDate());
         return ResponseEntity.ok(reservationRepository.save(reservation));
     }
+
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
