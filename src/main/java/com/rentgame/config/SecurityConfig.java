@@ -35,7 +35,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf().disable()
+        http.cors().and().csrf().disable()
                 .authenticationProvider(authProvider())
                 .authorizeHttpRequests()
                 .requestMatchers(HttpMethod.POST, "/api/users").permitAll()               // rejestracja
@@ -44,6 +44,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/games").authenticated()           // podgląd gier
                 .requestMatchers(HttpMethod.GET, "/api/equipment").authenticated()       // podgląd sprzętu
                 .requestMatchers(HttpMethod.POST, "/api/reservations").hasAnyRole("USER", "ADMIN")  //rezerwacja sprzetu
+                .requestMatchers("/api/users/reset-password").permitAll()
                 .requestMatchers("/api/**").authenticated()                              // cała reszta też dla zalogowanych
                 .anyRequest().permitAll()
                 .and()

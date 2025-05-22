@@ -34,4 +34,24 @@ public class EquipmentController {
 
         return ResponseEntity.ok(equipmentRepository.save(equipment));
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteEquipment(@PathVariable Long id) {
+        equipmentRepository.deleteById(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{id}/availability")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateAvailability(@PathVariable Long id, @RequestBody Map<String, Boolean> update) {
+        Equipment equipment = equipmentRepository.findById(id).orElseThrow();
+        Boolean available = update.get("available");
+        if (available != null) {
+            equipment.setAvailable(available);
+            equipmentRepository.save(equipment);
+        }
+        return ResponseEntity.ok().build();
+    }
+
 }
