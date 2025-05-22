@@ -44,6 +44,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/games").authenticated()           // podgląd gier
                 .requestMatchers(HttpMethod.GET, "/api/equipment").authenticated()       // podgląd sprzętu
                 .requestMatchers(HttpMethod.POST, "/api/reservations").hasAnyRole("USER", "ADMIN")  //rezerwacja sprzetu
+                .requestMatchers("/api/users/reset-password").permitAll()
                 .requestMatchers("/api/**").authenticated()                              // cała reszta też dla zalogowanych
                 .anyRequest().permitAll()
                 .and()

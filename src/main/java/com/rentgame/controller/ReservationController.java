@@ -46,64 +46,71 @@ public class ReservationController {
         return ResponseEntity.ok(reservations);
     }
 
-    @PostMapping
+    // POST /api/reservations/games
+    @PostMapping("/games")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public ResponseEntity<?> createReservation(@Valid @RequestBody ReservationRequest request) {
-        User user = userRepository.findById(request.getUserId()).orElseThrow();
-
-        // ✅ Warunek: wymagane gameId lub equipmentId
-        if (request.getGameId() == null && request.getEquipmentId() == null) {
-            return ResponseEntity.badRequest().body("Musisz wybrać grę lub sprzęt do rezerwacji.");
+    public ResponseEntity<?> createGameReservation(@Valid @RequestBody ReservationRequest request) {
+        if (request.getGameId() == null) {
+            return ResponseEntity.badRequest().body("Gra musi zostać wybrana.");
         }
 
-        // ✅ Warunek: startDate nie może być w przeszłości
         if (request.getStartDate().isBefore(LocalDate.now())) {
-            return ResponseEntity.badRequest().body("Nie można rezerwować na termin w przeszłości.");
+            return ResponseEntity.badRequest().body("Data rozpoczęcia nie może być w przeszłości.");
         }
 
-        // Gra
-        Game game = null;
-        if (request.getGameId() != null) {
-            game = gameRepository.findById(request.getGameId()).orElse(null);
-            if (game == null) {
-                return ResponseEntity.badRequest().body("Gra nie istnieje.");
-            }
+        User user = userRepository.findById(request.getUserId()).orElseThrow();
+        Game game = gameRepository.findById(request.getGameId()).orElse(null);
 
-            if (!game.isAvailable()) {
-                return ResponseEntity.badRequest().body("Gra jest oznaczona jako niedostępna przez administratora.");
-            }
-
-            List<Reservation> gameConflicts = reservationRepository
-                    .findConflictingGameReservations(request.getGameId(), request.getStartDate(), request.getEndDate());
-
-            if (!gameConflicts.isEmpty()) {
-                return ResponseEntity.badRequest().body("Gra jest już zarezerwowana w wybranym terminie.");
-            }
+        if (game == null || !game.isAvailable()) {
+            return ResponseEntity.badRequest().body("Gra nie istnieje lub jest niedostępna.");
         }
 
-        // Sprzęt
-        Equipment equipment = null;
-        if (request.getEquipmentId() != null) {
-            equipment = equipmentRepository.findById(request.getEquipmentId()).orElse(null);
-            if (equipment == null) {
-                return ResponseEntity.badRequest().body("Sprzęt nie istnieje.");
-            }
+        var conflicts = reservationRepository.findConflictingGameReservations(
+                request.getGameId(), request.getStartDate(), request.getEndDate());
 
-            if (!equipment.isAvailable()) {
-                return ResponseEntity.badRequest().body("Sprzęt jest oznaczony jako niedostępny przez administratora.");
-            }
-
-            List<Reservation> equipmentConflicts = reservationRepository
-                    .findConflictingEquipmentReservations(request.getEquipmentId(), request.getStartDate(), request.getEndDate());
-
-            if (!equipmentConflicts.isEmpty()) {
-                return ResponseEntity.badRequest().body("Sprzęt jest już zarezerwowany w wybranym terminie.");
-            }
+        if (!conflicts.isEmpty()) {
+            return ResponseEntity.badRequest().body("Gra już jest zarezerwowana w tym terminie.");
         }
 
-        Reservation reservation = new Reservation(user, game, equipment, request.getStartDate(), request.getEndDate());
+        Reservation reservation = new Reservation(user, game, null, request.getStartDate(), request.getEndDate());
         return ResponseEntity.ok(reservationRepository.save(reservation));
     }
+
+    // POST /api/reservations/equipment
+    @PostMapping("/equipment")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> createEquipmentReservation(@Valid @RequestBody ReservationRequest request) {
+        if (request.getUserId() == null || request.getEquipmentId() == null) {
+            return ResponseEntity.badRequest().body("Brakuje userId lub equipmentId.");
+        }
+
+        if (request.getEquipmentId() == null) {
+            return ResponseEntity.badRequest().body("Sprzęt musi zostać wybrany.");
+        }
+
+        if (request.getStartDate().isBefore(LocalDate.now())) {
+            return ResponseEntity.badRequest().body("Data rozpoczęcia nie może być w przeszłości.");
+        }
+
+        User user = userRepository.findById(request.getUserId()).orElseThrow();
+        Equipment equipment = equipmentRepository.findById(request.getEquipmentId()).orElse(null);
+
+        if (equipment == null || !equipment.isAvailable()) {
+            return ResponseEntity.badRequest().body("Sprzęt nie istnieje lub jest niedostępny.");
+        }
+
+        var conflicts = reservationRepository.findConflictingEquipmentReservations(
+                request.getEquipmentId(), request.getStartDate(), request.getEndDate());
+
+        if (!conflicts.isEmpty()) {
+            return ResponseEntity.badRequest().body("Sprzęt już jest zarezerwowany w tym terminie.");
+        }
+
+        Reservation reservation = new Reservation(user, null, equipment, request.getStartDate(), request.getEndDate());
+        return ResponseEntity.ok(reservationRepository.save(reservation));
+    }
+
+
 
 
     @DeleteMapping("/{id}")
